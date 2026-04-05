@@ -1,3 +1,8 @@
+[![Doc_Daway](https://img.shields.io/badge/Doc_Daway-医学AI-26A69A?style=for-the-badge&logo=obsidian&logoColor=white)](https://github.com/Tony0111/Synapse)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/Tony0111/Synapse)](https://github.com/Tony0111/Synapse/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Tony0111/Synapse)](https://github.com/Tony0111/Synapse/network)
+[![Last commit](https://img.shields.io/github/last-commit/Tony0111/Synapse)](https://github.com/Tony0111/Synapse/commits)
 # Doc_Daway：一个可推理的医学问答智能体
 
 > English version available: [README_en.md](./README_en.md)
