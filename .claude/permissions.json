@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": {
+      "read": ["**/*.md", "**/*.yaml", "**/*.json"],
+      "write": ["**/*.md", "**/*.yaml", "**/*.json"],
+      "execute": ["python"],
+      "tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+    },
+    "deny": {
+      "read": [".obsidian/**"],
+      "write": [".obsidian/**", ".claude/**"]
+    }
+  },
+  "version": "1.0"
+}

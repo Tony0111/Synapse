@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(choco install:*)",
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}

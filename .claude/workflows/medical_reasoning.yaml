@@ -1,0 +1,461 @@
+name: Medical Knowledge QA Workflow
+description: |
+  医学知识库迭代式问答工作流
+  基于Obsidian双向链接和YAML标签检索的智能问答系统
+  采用"理解→检索→推理→审查→（如需）深入链接→迭代"的闭环流程
+
+# ============================================================
+# 全局配置
+# ============================================================
+config:
+  # 迭代控制
+  max_iterations: 5                    # 最大循环次数，防止无限迭代
+  confidence_threshold: 0.85          # 答案置信度阈值（0-1）
+  min_evidence_count: 2               # 最少需要多少条证据支撑
+
+  # 检索控制
+  max_initial_notes: 8               # 初步检索最多返回笔记数
+  max_deep_links: 5                  # 从双向链接继续深入时每次最多读取笔记数
+
+  # 模型参数
+  model: "pro/deepseek-ai/DeepSeek-V3.2"
+  temperature: 0.2                   # 低温度保证专业严谨性
+  max_tokens: 60000
+
+# ============================================================
+# 工作流步骤定义
+# ============================================================
+steps:
+
+  # ----------------------------------------------------------
+  # 步骤1：接收与解析用户请求
+  # ----------------------------------------------------------
+  - name: request_parsing
+    description: 解析医学题目，提取关键信息
+    tools: [Read, Bash]
+    prompt: |
+      ## 任务：解析用户医学问题
+
+      请仔细阅读用户输入的医学题目或问题，提取以下信息：
+
+      ### 输出格式
+      ```json
+      {
+        "question_type": "选择题/简答题/论述题",
+        "disease_topic": "相关疾病或系统",
+        "core_concepts": ["关键词1", "关键词2", "关键词3"],
+        "options_analysis": {
+          "A": "选项A的关键特征",
+          "B": "选项B的关键特征",
+          ...
+        },
+        "what_being_asked": "题目到底在问什么（本质核心）",
+        "common_pitfalls": ["考生容易混淆的点1", "容易错的点2"]
+      }
+      ```
+
+      ### 分析原则
+      - 对于选择题，不仅分析题干，还要逐个分析各选项的正误判断依据
+      - 识别题目中的限定词（"正确的是"、"错误的是"、"不包括"等）
+      - 提取专业术语，这些将成为后续检索的关键词
+
+      ### 医学专业要求
+      - 使用规范的医学术语
+      - 注意区分相似概念（如肺炎链球菌 vs 肺炎克雷伯菌）
+
+    output:
+      format: structured_json
+      saves_to: "parsed_request"
+
+  # ----------------------------------------------------------
+  # 步骤2：关键词提取与标签检索
+  # ----------------------------------------------------------
+  - name: keyword_extraction_and_search
+    description: 提取关键词并在Obsidian笔记YAML frontmatter中检索
+    tools: [Read, Grep, Glob]
+    prompt: |
+      ## 任务：构建检索策略
+
+      **重要**：首先阅读YAML.md文件，了解所有可用的keywords和tags字段值，确保检索时使用准确的字段名和值。
+
+      ### 2.0 阅读YAML字段定义
+      阅读位于根目录的YAML.md文件，该文件列出了：
+      - 所有可用的keywords关键词（共200+个）
+      - 所有可用的tags标签（共30+个）
+      - category分类字段的值：炎症、变质、渗出、增生
+      - type类型字段的值：病理过程、病理改变、发病机制、病因学、鉴别诊断、临床表现、疾病分类、疾病
+
+      ### 2.1 构建检索词列表
+      根据核心概念列表和YAML.md中定义的字段值，生成精确检索词：
+      - 主检索词：疾病名称、核心机制（优先匹配YAML.md中的keywords）
+      - 辅助检索词：病理变化、相关结构、典型特征
+      - 标签检索：使用YAML.md中已定义的tags标签（如#炎症、#病理改变等）
+
+      ### 2.2 搜索YAML frontmatter
+      在Pathology目录下的笔记中，基于YAML.md字段值进行精确搜索：
+
+      ```bash
+      # 1. 按category搜索（如：category: 炎症）
+      # 2. 按type搜索（如：type: 病理改变）
+      # 3. 按tags精确匹配搜索（如：标签中存在 #炎症介质）
+      # 4. 按keywords中的精确词搜索
+      ```
+
+      ### 2.3 检索词示例参考（来自YAML.md）
+      **category值**: 炎症、变质、渗出、增生
+      **type值**: 病理过程、病理改变、发病机制、病因学、鉴别诊断、临床表现、疾病分类、疾病
+      **tags示例**: #病理学、#炎症、#病理改变、#炎症介质、#白细胞反应、#血管反应、#分子机制、#疾病分类、#病理类型
+      **keywords示例**: 血管通透性、白细胞渗出、吞噬作用、巨噬细胞、淋巴细胞、炎症介质、组胺、前列腺素、IL-1、TNF
+
+      ### 2.3 记录检索结果
+      ```json
+      {
+        "search_terms": ["检索词1", "检索词2"],
+        "retrieved_notes": [
+          {
+            "filename": "Path-XXX_笔记名.md",
+            "relevance_score": 0.9,
+            "matched_tags": ["#肺炎", "#链球菌"],
+            "title": "笔记标题"
+          }
+        ],
+        "search_notes": "简要说明本次搜索策略"
+      }
+      ```
+
+    output:
+      format: structured_json
+      saves_to: "retrieval_results"
+
+  # ----------------------------------------------------------
+  # 步骤3：阅读笔记与初步推理
+  # ----------------------------------------------------------
+  - name: initial_reading_and_reasoning
+    description: 阅读筛选出的笔记，提取关键信息进行初步推理
+    tools: [Read]
+    prompt: |
+      ## 任务：阅读笔记并提取关键信息
+
+      阅读步骤2中检索到的所有相关笔记，每篇笔记提取：
+
+      ### 信息提取模板
+      ```json
+      {
+        "note_id": "Path-XXX",
+        "title": "笔记标题",
+        "key_facts": [
+          "事实1：具体描述",
+          "事实2：具体描述"
+        ],
+        "directly_answers": ["能够直接回答的问题1", "问题2"],
+        "partially_answers": ["只能部分回答的问题"],
+        "claims_needing_verification": ["需要进一步核实的说法"],
+        "links_to_explore": ["[[Path-YYY|链接描述]]", "..."]
+      }
+      ```
+
+      ### 阅读原则
+      - 逐句精读，不要跳读
+      - 注意笔记中的限定词（"通常"、"大多数"、"少数情况下"）
+      - 区分"描述性知识"和"结论性知识"
+      - 记录笔记中的双向链接，这些可能提供深入信息
+
+      ### 笔记阅读顺序
+      1. 首先阅读高相关度笔记
+      2. 对于不确定的知识点，顺着双向链接继续阅读
+      3. 保持追踪：已读笔记列表、已提取的关键事实
+
+    output:
+      format: structured_json
+      saves_to: "note_reading_results"
+
+  # ----------------------------------------------------------
+  # 步骤4：初步答案生成
+  # ----------------------------------------------------------
+  - name: preliminary_answer
+    description: 基于阅读结果生成初步答案
+    prompt: |
+      ## 任务：生成初步答案
+
+      基于前几步的信息整合，给出初步答案：
+
+      ### 输出格式
+      ```json
+      {
+        "answer": "具体答案内容",
+        "confidence_level": 0.7,
+        "supporting_evidence": [
+          {
+            "source": "Path-XXX_笔记名.md",
+            "evidence_type": "直接证据/间接证据/推理",
+            "quote": "具体引用文字"
+          }
+        ],
+        "reasoning_chain": [
+          "推理步骤1：从...可知...",
+          "推理步骤2：进一步分析...",
+          "推理步骤3：综合判断..."
+        ],
+        "remaining_uncertainties": [
+          "不确定点1",
+          "不确定点2"
+        ]
+      }
+      ```
+
+      ### 生成要求
+      - 答案必须明确，不能模糊其词
+      - 每一条结论都要有对应的证据引用
+      - 明确标注置信度（0-1）
+      - 诚实说明不确定的地方
+
+    output:
+      format: structured_json
+      saves_to: "preliminary_answer"
+
+  # ----------------------------------------------------------
+  # 步骤5：自我审查
+  # ----------------------------------------------------------
+  - name: self_review
+    description: 对初步答案进行批判性自我审查
+    prompt: |
+      ## 任务：批判性自我审查
+
+      请对初步答案进行严格的自我审查，模拟医学专家的评审过程：
+
+      ### 审查清单（逐项检查）
+      ```
+      检查项1：逻辑严密性
+      ├─ 推理链是否完整？有没有跳跃性结论？
+      ├─ 因果关系是否成立？有没有混淆相关性和因果性？
+      └─ 是否存在逻辑漏洞？
+
+      检查项2：证据充分性
+      ├─ 证据数量是否达到最低要求（min_evidence_count）？
+      ├─ 证据来源是否可靠（来自知识库而非幻觉）？
+      ├─ 证据是否直接支撑结论？有没有过度推断？
+      └─ 有没有与证据相矛盾的潜在反例被忽略？
+
+      检查项3：回答完整性
+      ├─ 是否准确回答了题干的每个疑问点？
+      ├─ 有没有遗漏重要的限定条件？
+      ├─ 选项分析是否全面？（如为选择题）
+      └─ 有没有答非所问的情况？
+
+      检查项4：专业准确性
+      ├─ 医学概念是否准确？
+      ├─ 术语使用是否规范？
+      ├─ 数值阈值是否正确（如有）？
+      └─ 是否有最新的医学指南或共识作为参考？
+
+      检查项5：知识库覆盖度
+      ├─ 知识库中的笔记是否足以支撑这个答案？
+      ├─ 是否存在知识盲区（某些关键信息缺失）？
+      └─ 是否需要通过双向链接深入更多笔记？
+      ```
+
+      ### 审查决策
+      ```json
+      {
+        "review_passed": true,
+        "confidence_score": 0.88,
+        "issues_found": [
+          {
+            "issue": "具体问题描述",
+            "severity": "critical/major/minor",
+            "suggestion": "改进建议"
+          }
+        ],
+        "action_required": "pass_to_answer / need_more_evidence / need_deeper_exploration"
+      }
+      ```
+
+      ### 终止条件检查
+      - 如果confidence_score >= confidence_threshold 且 issues_found无critical问题 → 通过审查
+      - 如果已到达max_iterations → 强制终止迭代
+      - 如果action_required确认知识库不足 → 承认局限并给出最佳答案
+
+    output:
+      format: structured_json
+      saves_to: "review_result"
+
+  # ----------------------------------------------------------
+  # 步骤6：条件分支 - 审查结果处理
+  # ----------------------------------------------------------
+  - name: branch_on_review
+    description: 根据审查结果决定后续行动
+    type: conditional
+
+    conditions:
+      - if: "review_result.review_passed == true AND review_result.confidence_score >= config.confidence_threshold"
+        then: "finalize_answer"
+
+      - if: "review_result.action_required == 'need_more_evidence' AND iteration_count < config.max_iterations"
+        then: "continue_to_step7"
+
+      - if: "review_result.action_required == 'need_deeper_exploration' AND iteration_count < config.max_iterations"
+        then: "continue_to_step7"
+
+      - if: "iteration_count >= config.max_iterations"
+        then: "terminate_with_best_answer"
+
+      - if: "review_result.review_passed == false AND review_result.confidence_score < 0.5"
+        then: "acknowledge_knowledge_gap"
+
+  # ----------------------------------------------------------
+  # 步骤7：双向链接深入探索
+  # ----------------------------------------------------------
+  - name: deep_link_exploration
+    description: 沿着笔记中的双向链接继续深入阅读
+    tools: [Read, Grep]
+    prompt: |
+      ## 任务：双向链接深入探索
+
+      基于审查中发现的问题，沿着双向链接继续阅读：
+
+      ### 操作步骤
+      1. 从上一步骤中记录的"links_to_explore"列表中，选择相关度最高的链接
+      2. 读取被链接的笔记
+      3. 提取新信息，更新证据链
+      4. 检查是否有新的双向链接需要探索
+
+      ### 记录格式
+      ```json
+      {
+        "explored_links": [
+          {
+            "from_note": "Path-XXX",
+            "to_note": "Path-YYY",
+            "link_description": "链接描述",
+            "new_evidence_found": ["新发现1", "新发现2"],
+            "links_from_new_note": ["新的可探索链接列表"]
+          }
+        ],
+        "updated_evidence": ["更新后的完整证据列表"],
+        "remaining_questions": ["仍需解答的问题"]
+      }
+      ```
+
+      ### 探索策略
+      - 优先选择与当前问题直接相关的链接
+      - 控制每次探索的笔记数量（max_deep_links）
+      - 记录已探索路径，避免重复阅读
+      - 如果发现关键新证据，返回步骤4更新答案
+
+    output:
+      format: structured_json
+      saves_to: "deep_exploration_results"
+
+  # ----------------------------------------------------------
+  # 步骤8：迭代循环控制
+  # ----------------------------------------------------------
+  - name: iteration_loop
+    description: 管理迭代循环，判断是否继续或终止
+    type: loop
+
+    loop_config:
+      max_iterations: 5
+      iteration_var: "iteration_count"
+
+    loop_steps:
+      - "initial_reading_and_reasoning"
+      - "preliminary_answer"
+      - "self_review"
+      - "branch_on_review"
+      - "deep_link_exploration"  # 仅当需要时执行
+
+    termination_conditions:
+      - condition: "iteration_count >= max_iterations"
+        action: "terminate_with_best_answer"
+        reason: "已达到最大迭代次数"
+
+      - condition: "review_result.review_passed == true AND review_result.confidence_score >= config.confidence_threshold"
+        action: "exit_loop"
+        reason: "答案通过审查且置信度达标"
+
+      - condition: "action_required == 'acknowledge_knowledge_gap'"
+        action: "exit_loop"
+        reason: "知识库无法支撑该问题"
+
+# ============================================================
+# 最终答案输出
+# ============================================================
+output:
+  format: markdown
+
+  template: |
+    ## 答案
+
+    **${final_answer}**
+
+    ---
+
+    ### 推理过程
+
+    ${reasoning_chain}
+
+    ---
+
+    ### 证据引用
+
+    ${supporting_evidence}
+
+    ---
+
+    ### 置信度评估
+
+    - 置信度：${confidence_level}
+    - 审查迭代次数：${iteration_count}
+    - 证据数量：${evidence_count}
+
+    ${if_knowledge_gap:
+      > **知识库局限性说明**：本答案基于现有笔记知识库，可能存在以下局限：${limitations}
+    }
+
+  include_citations: true
+  citation_format: "[[Path-XXX|笔记标题]]"
+  include_reasoning_chain: true
+
+# ============================================================
+# 知识库不足处理机制
+# ============================================================
+knowledge_gap_handling:
+  trigger_conditions:
+    - "检索结果为空"
+    - "置信度持续低于0.5"
+    - "关键证据缺失"
+
+  response_template: |
+    ## 关于您的问题
+
+    经过检索知识库和迭代推理，我无法以高置信度回答这个问题。
+
+    ### 检索情况
+    - 相关笔记数量：${retrieved_count}
+    - 匹配的核心概念：${matched_concepts}
+
+    ### 知识库局限性
+    ${limitations_list}
+
+    ### 建议
+    1. 这个问题可能涉及以下更专业的医学领域，建议查阅专业教材或指南
+    2. 您可以考虑补充相关笔记到知识库中
+
+    ### 我能提供的最佳回答（仅供参考）
+    基于现有笔记中的有限信息：${best_effort_answer}
+
+  avoid_hallucination: true
+  fallback_to_acknowledgment: true
+
+# ============================================================
+# 质量保证
+# ============================================================
+quality_assurance:
+  self_check_enabled: true
+
+  check_before_final_answer:
+    - "答案是否明确？"
+    - "每条结论是否有证据支撑？"
+    - "是否回答了题目的所有部分？"
+    - "术语使用是否准确？"
+    - "是否诚实说明了不确定性？"

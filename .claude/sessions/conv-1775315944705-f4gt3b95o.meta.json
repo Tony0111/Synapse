@@ -1,0 +1,23 @@
+{
+  "id": "conv-1775315944705-f4gt3b95o",
+  "title": "你是一个专门协助完成医学AI论文写作的研究助手。",
+  "titleGenerationStatus": "failed",
+  "createdAt": 1775315944705,
+  "updatedAt": 1775316398780,
+  "lastResponseAt": 1775315996034,
+  "sessionId": null,
+  "sdkSessionId": "fa2b3749-3fae-4e62-bd49-0ee732f86255",
+  "previousSdkSessionIds": [
+    "de66605c-449b-4ee1-9841-5e9d3191d78d"
+  ],
+  "currentNote": "template_Article.pdf-f23e60d4-6212-4c47-b3a6-52ca4f8222de/MinerU_markdown_202604042301607_b1878ba7.md",
+  "usage": {
+    "model": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "inputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "cacheReadInputTokens": 0,
+    "contextWindow": 200000,
+    "contextTokens": 0,
+    "percentage": 0
+  }
+}

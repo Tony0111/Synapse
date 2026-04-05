@@ -1,0 +1,20 @@
+{
+  "id": "conv-1775286413526-yszrpq8vv",
+  "title": "把以下中文医学术语改为英文：",
+  "titleGenerationStatus": "failed",
+  "createdAt": 1775286413527,
+  "updatedAt": 1775315850512,
+  "lastResponseAt": 1775286525839,
+  "sessionId": null,
+  "sdkSessionId": "0dca8457-ffee-4a22-bfc5-5d0b29ca77c0",
+  "currentNote": "Pathology/Path-027_炎症介质概述.md",
+  "usage": {
+    "model": "openai/gpt-5.4",
+    "inputTokens": 212,
+    "cacheCreationInputTokens": 0,
+    "cacheReadInputTokens": 19136,
+    "contextWindow": 200000,
+    "contextTokens": 19348,
+    "percentage": 10
+  }
+}

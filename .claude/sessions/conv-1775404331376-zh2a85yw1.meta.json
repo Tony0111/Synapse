@@ -1,0 +1,20 @@
+{
+  "id": "conv-1775404331376-zh2a85yw1",
+  "title": "我的项目最初的想法是，通过显性逻辑使得AI真正学会思考，并且让AI得出的答案可被证伪，因此可以相信",
+  "titleGenerationStatus": "failed",
+  "createdAt": 1775404331377,
+  "updatedAt": 1775409278012,
+  "lastResponseAt": 1775409278012,
+  "sessionId": "accb0086-4a00-427b-9211-b6d39ffb292b",
+  "sdkSessionId": "accb0086-4a00-427b-9211-b6d39ffb292b",
+  "currentNote": "README.md",
+  "usage": {
+    "model": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "inputTokens": 1598,
+    "cacheCreationInputTokens": 0,
+    "cacheReadInputTokens": 94656,
+    "contextWindow": 200000,
+    "contextTokens": 96254,
+    "percentage": 48
+  }
+}

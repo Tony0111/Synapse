@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__executeCode"
+    ]
+  },
+   "env": {
+    "ANTHROPIC_BASE_URL": "https://api.siliconflow.cn/",
+    "ANTHROPIC_AUTH_TOKEN": "sk-ikbrbqzawurodmvtrkqcyzlgmchijtuggseomugijoucqmcp",
+    "API_TIMEOUT_MS": "3000000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 0,
+    "ANTHROPIC_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "ANTHROPIC_SMALL_FAST_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2"
+  }
+}
+
