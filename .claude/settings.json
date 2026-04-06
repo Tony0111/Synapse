@@ -6,7 +6,7 @@
   },
    "env": {
     "ANTHROPIC_BASE_URL": "https://api.siliconflow.cn/",
-    "ANTHROPIC_AUTH_TOKEN": "sk-ikbrbqzawurodmvtrkqcyzlgmchijtuggseomugijoucqmcp",
+    "ANTHROPIC_AUTH_TOKEN": "xxxxxxxxxxx",
     "API_TIMEOUT_MS": "3000000",
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 0,
     "ANTHROPIC_MODEL": "Pro/deepseek-ai/DeepSeek-V3.2",
